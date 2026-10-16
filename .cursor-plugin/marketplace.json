@@ -1,0 +1,22 @@
+{
+  "name": "confident-skills",
+  "owner": {
+    "name": "Confident AI",
+    "email": "open-source@confident-ai.com"
+  },
+  "metadata": {
+    "description": "Confident AI agent skills for AI tracing and the Confident AI API. For Cursor."
+  },
+  "plugins": [
+    {
+      "name": "confident-trace",
+      "source": "plugins/confident-trace",
+      "description": "Skills for instrumenting AI applications with the confident-trace SDK and exporting raw OpenTelemetry traces to Confident AI."
+    },
+    {
+      "name": "confident-client",
+      "source": "plugins/confident-client",
+      "description": "Skills for managing Confident AI organizations, projects, members, roles, governance policies, and API keys with the confident-ai SDK."
+    }
+  ]
+}

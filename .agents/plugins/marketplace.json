@@ -1,0 +1,32 @@
+{
+  "name": "confident-skills",
+  "interface": {
+    "displayName": "Confident AI Skills"
+  },
+  "plugins": [
+    {
+      "name": "confident-trace",
+      "source": {
+        "source": "local",
+        "path": "./plugins/confident-trace"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "confident-client",
+      "source": {
+        "source": "local",
+        "path": "./plugins/confident-client"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
