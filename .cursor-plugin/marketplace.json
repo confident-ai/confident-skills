@@ -11,7 +11,7 @@
     {
       "name": "confident-trace",
       "source": "plugins/confident-trace",
-      "description": "Skills for instrumenting AI applications with the confident-trace SDK and exporting raw OpenTelemetry traces to Confident AI."
+      "description": "Skills for instrumenting AI applications with the confident-trace SDK, exporting raw OpenTelemetry traces to Confident AI, and migrating from Langfuse."
     },
     {
       "name": "confident-client",

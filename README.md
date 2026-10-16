@@ -3,7 +3,8 @@
 # `confident-skills`: Agent Skills for Confident AI
 
 Confident Skills helps coding agents instrument AI applications, export
-OpenTelemetry traces, and work with the Confident AI API. Install the plugins
+OpenTelemetry traces, migrate from Langfuse, and work with the Confident AI
+API. Install the plugins
 in Claude Code, Cursor, or Codex to give your agent the setup instructions,
 reference material, and templates for each task.
 
@@ -14,6 +15,8 @@ reference material, and templates for each task.
   your application, using supported integrations and custom spans.
 - **OpenTelemetry setup:** configure your application's OpenTelemetry SDK to
   send traces to Confident AI over OTLP/HTTP.
+- **Langfuse migration:** move tracing from Langfuse SDK v1, v2, v3, or v4 to
+  `confident-trace`, or export the spans Langfuse already emits to Confident AI.
 - **Platform management:** use the `confident-ai` SDK to manage organizations,
   projects, members, roles, governance policies, and API keys.
 
@@ -24,7 +27,7 @@ project needs.
 
 | Plugin | Included skills | Purpose |
 | --- | --- | --- |
-| [`confident-trace`](plugins/confident-trace) | `confident-tracing`, `confident-otel` | Instrument AI applications and configure trace export. |
+| [`confident-trace`](plugins/confident-trace) | `confident-tracing`, `confident-otel`, `confident-migrate-langfuse` | Instrument AI applications, configure trace export, and migrate from Langfuse. |
 | [`confident-client`](plugins/confident-client) | `confident-client` | Work with the Confident AI platform through its SDK. |
 
 ## Install

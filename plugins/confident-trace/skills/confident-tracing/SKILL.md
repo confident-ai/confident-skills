@@ -10,7 +10,8 @@ description: >
   send confident-trace SDK traces to Confident AI. DO NOT TRIGGER for
   evaluation test suites, datasets, goldens, metrics, or test runs, or for raw
   OpenTelemetry / OTLP export without the confident-trace package (use the
-  `confident-otel` skill). This skill is
+  `confident-otel` skill), or for migrating existing Langfuse tracing (use the
+  `confident-migrate-langfuse` skill). This skill is
   purely confident-trace SDK instrumentation—producing well-formed traces, not
   running evals.
 license: Apache-2.0

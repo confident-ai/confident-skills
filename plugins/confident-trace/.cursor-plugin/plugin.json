@@ -2,7 +2,7 @@
   "name": "confident-trace",
   "displayName": "Confident Trace",
   "version": "1.0.0",
-  "description": "Skills for instrumenting AI applications with the confident-trace SDK and exporting raw OpenTelemetry traces to Confident AI.",
+  "description": "Skills for instrumenting AI applications with the confident-trace SDK, exporting raw OpenTelemetry traces to Confident AI, and migrating from Langfuse.",
   "author": {
     "name": "Confident AI",
     "email": "open-source@confident-ai.com"
@@ -16,7 +16,9 @@
     "opentelemetry",
     "otel",
     "observability",
-    "confident-ai"
+    "confident-ai",
+    "langfuse",
+    "migration"
   ],
   "category": "developer-tools",
   "skills": "./skills/"
