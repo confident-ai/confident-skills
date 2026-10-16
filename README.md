@@ -1,23 +1,31 @@
 <img src="assets/confident-skills-banner-radial-4s.svg" alt="Confident Skills: a moonlit observatory atrium where glowing trails from distant towers meet at one lit doorway, with roses in the foreground" width="100%" />
 
-# Confident Skills
+# `confident-skills`: Agent Skills for Confident AI
 
-Agent skills for Confident AI, packaged as plugins for Claude Code, Cursor, and
-Codex.
+Confident Skills helps coding agents instrument AI applications, export
+OpenTelemetry traces, and work with the Confident AI API. Install the plugins
+in Claude Code, Cursor, or Codex to give your agent the setup instructions,
+reference material, and templates for each task.
 
-Confident AI is AI monitoring. You trace your AI app, and it catches what's
-going wrong.
+## What it does
+
+- **AI tracing:** add the
+  [`confident-trace`](https://github.com/confident-ai/confident-trace) SDK to
+  your application, using supported integrations and custom spans.
+- **OpenTelemetry setup:** configure your application's OpenTelemetry SDK to
+  send traces to Confident AI over OTLP/HTTP.
+- **Platform management:** use the `confident-ai` SDK to manage organizations,
+  projects, members, roles, governance policies, and API keys.
 
 ## Plugins
 
-| Plugin | Path | Skills | Agents |
-| --- | --- | --- | --- |
-| `confident-trace` | [plugins/confident-trace](plugins/confident-trace) | `confident-tracing`, `confident-otel` | Claude Code, Cursor, Codex |
-| `confident-client` | [plugins/confident-client](plugins/confident-client) | `confident-client` | Claude Code, Cursor, Codex |
+Both plugins support Claude Code, Cursor, and Codex. Install the ones your
+project needs.
 
-- `confident-tracing` instruments an AI app with the confident-trace SDK.
-- `confident-otel` exports raw OpenTelemetry traces to Confident AI.
-- `confident-client` calls the Confident AI API with the confident-ai SDK.
+| Plugin | Included skills | Purpose |
+| --- | --- | --- |
+| [`confident-trace`](plugins/confident-trace) | `confident-tracing`, `confident-otel` | Instrument AI applications and configure trace export. |
+| [`confident-client`](plugins/confident-client) | `confident-client` | Work with the Confident AI platform through its SDK. |
 
 ## Install
 
@@ -54,16 +62,23 @@ git clone https://github.com/confident-ai/confident-skills
 cp -r confident-skills/plugins/confident-trace ~/.cursor/plugins/local/
 ```
 
-## Layout
+## Repository
 
-- `plugins/` holds one folder per plugin, with its skills and its manifests
-  for each agent.
-- `skills/` is for skills that span the platform rather than one SDK.
-- `.claude-plugin/`, `.cursor-plugin/`, and `.agents/plugins/` hold the
-  marketplace for each agent.
+| Directory | Contents |
+| --- | --- |
+| `plugins/` | Installable plugins, agent manifests, skills, references, and templates. |
+| `skills/` | Shared skills that span the platform. |
+| `.claude-plugin/` | Claude Code marketplace manifest. |
+| `.cursor-plugin/` | Cursor marketplace manifest. |
+| `.agents/plugins/` | Codex marketplace manifest. |
+| `scripts/` | Marketplace and plugin validation. |
 
-Run `python scripts/validate.py` to check the marketplaces and plugins.
+Validate the marketplace manifests and plugin structure:
+
+```sh
+python3 scripts/validate.py
+```
 
 ## License
 
-Apache-2.0
+[Apache License 2.0](LICENSE).
