@@ -1,4 +1,4 @@
-<img src="assets/confident-skills-banner.png" alt="Confident Skills: a moonlit observatory atrium where glowing trails from distant towers meet at one lit doorway, with roses in the foreground" width="100%" />
+<img src="assets/confident-skills-banner-radial-4s.svg" alt="Confident Skills: a moonlit observatory atrium where glowing trails from distant towers meet at one lit doorway, with roses in the foreground" width="100%" />
 
 # Confident Skills
 
