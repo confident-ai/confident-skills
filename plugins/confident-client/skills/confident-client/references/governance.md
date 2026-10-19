@@ -5,12 +5,15 @@ Governance policies are **organization-level** bundles of compliance _controls_
 standards across the account. The SDK supports the full lifecycle: create, read,
 update and delete a policy, and assign or unassign it to projects.
 
-Governance exists **only at the organization scope** (`client.organization`);
-there is no project-scoped governance client. A project's currently attached
-policy is visible on the project itself (`project.governance_policy` in Python,
-`project.governancePolicy` in TypeScript).
+Policies are managed at the **organization scope** (`client.organization`). A
+project's currently attached policy is visible on the project itself
+(`project.governance_policy` in Python, `project.governancePolicy` in
+TypeScript). The one project-scoped call checks a project against that policy:
+`client.governance.assess()`, which `confident-ai gate` runs in CI (see
+[Gate a Deployment](#gate-a-deployment)).
 
-All methods here require an **Organization API Key**. See
+Every method here except `assess` requires an **Organization API Key**;
+`assess` uses the **Project API Key** of the project it checks. See
 `references/quickstart.md` to create a client. Each operation is shown for both
 Python and TypeScript — use the code block matching your project.
 
@@ -184,6 +187,43 @@ console.log(result.unassignedProjectIds);
 console.log(result.skippedProjectIds);
 console.log(result.count);
 ```
+
+## Gate a Deployment
+
+Assess the project against every control in its governance policy. `passed` is
+`true` only when they all pass, and the result names the policy it was assessed
+against. A project that belongs to no policy is rejected with a `400`.
+
+```python
+from confident_ai import ConfidentAI
+
+client = ConfidentAI()  # reads CONFIDENT_PROJ_API_KEY
+
+assessment = client.governance.assess()
+print(assessment.passed, assessment.governance_policy.name)
+```
+
+```typescript
+import { ConfidentAI } from "confident-ai";
+
+const client = new ConfidentAI(); // reads CONFIDENT_PROJ_API_KEY
+
+const assessment = await client.governance.assess();
+console.log(assessment.passed, assessment.governancePolicy.name);
+```
+
+In CI, run the `confident-ai` command both packages install instead of writing
+a script. It exits `0` when the policy passes, `1` when it fails or can't be
+assessed, and `2` on bad usage, so a failing policy stops the pipeline:
+
+```bash
+confident-ai gate        # Python: pip install confident-ai
+npx confident-ai gate    # TypeScript
+confident-ai gate -q     # print nothing; the exit code still carries the verdict
+```
+
+It reads the project key from `CONFIDENT_PROJ_API_KEY`. Run it after the steps
+that produce what the controls check, such as evaluations or red teaming.
 
 ## Next Steps
 

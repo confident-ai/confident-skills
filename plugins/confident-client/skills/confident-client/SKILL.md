@@ -5,16 +5,17 @@ description: >
   Python and TypeScript. TRIGGER when the user wants to manage an account —
   organizations, projects, members, invitations, roles, policies, permissions,
   governance policies, API keys — or to read and write the resources a project
-  holds: prompts, datasets and goldens, traces, spans and threads, metrics and
-  metric collections, test runs, evaluations, dashboards, annotation queues, red
-  teaming. Also TRIGGER to provision or rotate API keys, onboard or offboard
-  team members, set up RBAC (permissions → policies → roles → members), or
-  automate project provisioning. Account-level calls need an Organization API
-  Key (`CONFIDENT_ORG_API_KEY`); everything else needs a Project API Key
-  (`CONFIDENT_PROJ_API_KEY`). DO NOT TRIGGER to instrument an application with
-  tracing (use the `confident-tracing` or `confident-otel` skill) or to write a
-  pytest eval suite; this skill calls the API, it does not run evals or emit
-  spans from a running app.
+  holds: prompts, datasets and goldens (with images), traces, spans and threads,
+  metrics and metric collections, test runs, evaluations, dashboards, annotation
+  queues, red teaming. Also TRIGGER to provision or rotate API keys, onboard or
+  offboard team members, set up RBAC (permissions → policies → roles → members),
+  automate project provisioning, or gate a deployment on the project's
+  governance policy in CI (`confident-ai gate`). Account-level calls need an
+  Organization API Key (`CONFIDENT_ORG_API_KEY`); everything else needs a
+  Project API Key (`CONFIDENT_PROJ_API_KEY`). DO NOT TRIGGER to instrument an
+  application with tracing (use the `confident-tracing` or `confident-otel`
+  skill) or to write a pytest eval suite; this skill calls the API, it does not
+  run evals or emit spans from a running app.
 license: Apache-2.0
 metadata:
   author: Confident AI
@@ -148,7 +149,9 @@ language's examples.
 10. Never hardcode secrets or raw sensitive data; prefer environment variables
     for keys.
 11. Governance policies are **organization-scoped** and support full CRUD —
-    create, read, update, delete, and assign or unassign to projects.
+    create, read, update, delete, and assign or unassign to projects. Checking
+    a project against its policy is project-scoped: `client.governance.assess()`,
+    or `confident-ai gate` in CI.
 12. **Python has an async twin for every method**, prefixed `a_`:
     `await client.organization.a_get()`. TypeScript is already promise-based.
 13. **Clarify before mutating.** For create/update calls, confirm the required
@@ -156,6 +159,10 @@ language's examples.
     rather than silently omitting them or guessing. In particular: whether a new
     project should have an **owner** (`email`), and which **role** (`role_id`) to
     grant when inviting members or adding them to a project. Ask first, then act.
+14. **Images go into text as `Media`.** Format a `Media` into a golden's, test
+    case's, annotation's or prompt's text and the SDK fills `imagesMapping`; never build
+    it by hand. Read them back with `parse_multimodal`. See
+    `references/media.md`.
 
 ## References
 
@@ -171,7 +178,8 @@ examples; use the code block matching the target language.
 | Members, invitations, and role assignment | `references/members-and-invitations.md` |
 | RBAC: permissions, policies, and roles | `references/roles-policies-permissions.md` |
 | Provision, rotate, enable/disable, and delete API keys | `references/api-keys.md` |
-| Governance policies: CRUD and assign/unassign to projects | `references/governance.md` |
+| Governance policies: CRUD, assign/unassign to projects, and the deployment gate | `references/governance.md` |
+| Images in goldens, test cases, annotations and prompts | `references/media.md` |
 | Prompts, datasets, traces, metrics, test runs and evaluations | `references/resources.md` |
 | Background: why observability matters for AI products | `references/ai-pm-observability.md` |
 

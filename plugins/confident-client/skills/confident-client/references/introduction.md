@@ -101,8 +101,9 @@ examples live in the same file).
   See `references/roles-policies-permissions.md`.
 - **API keys** — provision, rotate, disable and delete organization- and
   project-scoped keys. See `references/api-keys.md`.
-- **Governance policies** (organization scope only) — create, read, update and
-  delete compliance policies, and assign/unassign them to projects.
+- **Governance policies** — create, read, update and delete compliance
+  policies at the organization scope, assign/unassign them to projects, and
+  gate a project's deployment on its policy (`confident-ai gate`).
   See `references/governance.md`.
 
 ### Project-scoped resources
@@ -110,6 +111,8 @@ examples live in the same file).
 - **Prompts, datasets, traces, spans, threads, metrics, test runs and
   evaluations** — see `references/resources.md`, which also indexes the
   remaining resources.
+- **Images** in goldens, test cases and annotations — see
+  `references/media.md`.
 
 Every one is reached off the client with a project key configured, and every
 method carries the route's own summary and description as its docstring or
