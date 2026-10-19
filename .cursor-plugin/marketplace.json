@@ -5,7 +5,7 @@
     "email": "open-source@confident-ai.com"
   },
   "metadata": {
-    "description": "Confident AI agent skills for AI tracing and the Confident AI API. For Cursor."
+    "description": "Confident AI agent skills for AI tracing, eval setup, and the Confident AI API. For Cursor."
   },
   "plugins": [
     {
@@ -17,6 +17,11 @@
       "name": "confident-client",
       "source": "plugins/confident-client",
       "description": "Skills for managing Confident AI organizations, projects, members, roles, governance policies, and API keys with the confident-ai SDK."
+    },
+    {
+      "name": "confident-eval-setup",
+      "source": "plugins/confident-eval-setup",
+      "description": "Skills for getting an LLM app ready to evaluate on Confident AI: create and verify an AI connection over the Confident AI MCP server and upload a dataset."
     }
   ]
 }
