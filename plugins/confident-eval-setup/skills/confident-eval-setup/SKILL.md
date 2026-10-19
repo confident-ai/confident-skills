@@ -17,7 +17,7 @@ metadata:
   version: "1.0.0"
   category: evaluation
   tags: "confident-ai, evals, ai-connections, datasets, goldens, mcp"
-  compatibility: "Requires the Confident AI MCP server (https://mcp.confident-ai.com/mcp, or eu.mcp.confident-ai.com for EU) connected with OAuth. AI connections need the Starter plan or above."
+  compatibility: "Requires the Confident AI MCP server (https://mcp.confident-ai.com/mcp, or eu.mcp.confident-ai.com for EU) connected with OAuth."
 ---
 
 # Confident AI Eval Setup
@@ -53,7 +53,6 @@ they still want the platform set up.
   app. `localhost` and private hosts are not reachable. For an app behind a
   firewall, point the user to the Confident Agent
   (https://www.confident-ai.com/docs/llm-evaluation/ai-connections/confident-agent).
-- The Starter plan or above for AI connections.
 
 ## Workflow
 
