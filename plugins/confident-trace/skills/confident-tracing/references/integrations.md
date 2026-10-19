@@ -35,7 +35,7 @@ being installed. Confirm it in the current docs first.
 - Providers—OpenAI, Anthropic, Google GenAI, and Bedrock:
   [Python supported surfaces](https://github.com/confident-ai/confident-trace/blob/main/python/README.md#what-is-supported)
 - LangChain and LangGraph:
-  [Python LangChain and LangGraph setup](https://github.com/confident-ai/confident-trace/blob/main/python/README.md#langchain-and-langgraph)
+  [Python LangChain and LangGraph setup](https://github.com/confident-ai/confident-trace/blob/main/python/README.md#langchain-langgraph-and-deep-agents)
 - Google ADK, AgentCore, Microsoft Agent Framework, Pydantic AI, Strands,
   OpenAI Agents, and Claude Agent SDK:
   [native integration setup and limitations](https://github.com/confident-ai/confident-trace/blob/main/python/docs/integrations.md)
