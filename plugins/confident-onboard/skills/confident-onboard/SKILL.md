@@ -129,15 +129,25 @@ Then run `onboard wait`. It waits up to four minutes and exits with:
   are none, stop: the user needs an admin to give them API key access.
   Then run `onboard complete --project-id <id>`.
 - **`new`**: it lists `questions` to create their organization and first
-  project. Ask the user each one, using its `prompt`, offering its `options`
-  for `single_select` and `multi_select`, and its `defaultValue` when present.
-  Ask them together in one message when you can. Respect `required`,
-  `maxLength`, and `minSelections`. For `multi_select`, if the user picks an
-  option marked `exclusive`, send only that one; if they pick one with
-  `acceptsCustomValue`, ask its `customPrompt` and send their text in place of
-  that option's value. Build a JSON object of question `id` to answer: a string
-  for `text`, the option `value` for `single_select`, an array of values for
-  `multi_select`. Then run
+  project. Fill in every answer yourself, then confirm them with the user in
+  one message instead of asking one by one:
+  - The user's name: `name` from `wait`, else a question's `defaultValue`.
+  - The organization: their company from the `email` domain; for a personal
+    address such as gmail.com, use their name.
+  - The project: the application's name from its README, package manifest, or
+    folder, else the question's `defaultValue`.
+  - Everything else describes the application, so answer it from the code:
+    its stage, single-turn or multi-turn, modalities, whether end users talk
+    to it, its tool calls, MCP, or RAG, and its use case. Read enough of the
+    code to answer; you need it for step 5 anyway.
+
+  Show the answers as a short list with each question's `prompt`, and ask the
+  user to reply yes or change any. Use only the question's own `options`, and
+  respect `required`, `maxLength`, and `minSelections`. In a `multi_select`, an
+  option marked `exclusive` goes alone, and an option with `acceptsCustomValue`
+  is replaced by the custom text itself. Build a JSON object of question `id`
+  to answer: a string for `text`, the option `value` for `single_select`, an
+  array of values for `multi_select`. Once the user confirms, run
   `onboard complete --answers '<json>'`, or write the JSON to a temporary file
   outside the project and pass `--answers @<file>`.
 
@@ -163,15 +173,35 @@ Carry these values from `complete` or `check-key` into it:
 
 Follow the batch section of `references/instrument.md`: one input first to
 prove tracing works, then the full batch, one input after another, each its
-own trace. Never fake a run, mock the model, or stub a call. If the app needs a
-secret or a service you do not have, stop here and tell the user exactly what
-is needed and the exact command to run once they have it.
+own trace. Never fake a run, mock the model, or stub a call.
+
+If the app cannot run because a secret or service is missing, most often a
+model provider key, stop and ask the user how to continue. Name exactly what is
+missing and offer these choices:
+
+1. **Add it and run.** The user puts the key in the file the app already reads
+   it from, such as `.env`, themselves; never ask them to paste it into the
+   chat. Then rerun the single input and the batch.
+2. **Run it later.** Give the exact run command. Tracing stays in place and
+   their traces arrive whenever they run it.
+3. **See sample traces now.** Run `onboard seed`. It sends a small set of
+   sample traces from a support agent, 8 requests including a couple of
+   realistic failures, so the user can explore Confident AI right away. Say
+   plainly that these are samples, not their app, and that their own traces
+   will appear once they run the command from choice 2.
+
+Choices 1 and 3 continue to step 7; after choice 3 run
+`onboard verify --expect 8`. Choice 2 ends with the final report.
 
 ### 7. Verify the traces arrived
 
-Run `onboard verify`. It polls for up to three minutes for traces sent since
-the key was saved and stops once it sees 7. Pass `--expect <n>` if you ran a
-different number.
+First tell the user you are waiting, in one line such as "Waiting for your
+traces to reach Confident AI. This can take up to three minutes." The command
+prints nothing until it finishes.
+
+Then run `onboard verify`. It polls for up to three minutes for traces sent
+since the key was saved and stops once it sees 7. Pass `--expect <n>` if you
+ran a different number.
 
 - `0` and `status: found`: open `handoffUrl` in the browser `verify` reports
   in `browser`, the same one used for sign-in:
@@ -218,3 +248,4 @@ key.
 | --- | --- |
 | Adding tracing, loading the key, and running the batch | `references/instrument.md` |
 | The helper script and its commands | `scripts/confident_onboard.py` |
+| Sample traces `seed` sends when the app cannot run | `assets/sample-traces.json` |
