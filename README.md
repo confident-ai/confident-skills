@@ -8,18 +8,25 @@ evals, and work with the Confident AI API. Install the plugins in Claude Code,
 Cursor, or Codex to give your agent the setup instructions, reference material,
 and templates for each task.
 
-## Get started in one paste
+## Get started
 
-New to Confident AI? Paste this into Claude Code, Cursor, Codex, or any coding
-agent, from your AI app's folder. Nothing to install first:
+New to Confident AI? Add the onboarding skill to Claude Code, Codex, Cursor, or
+any other coding agent:
+
+```bash
+npx skills add confident-ai/confident-skills --skill "confident-onboard"
+```
+
+Then ask your agent, from your AI app's folder, to onboard you to Confident AI.
+It signs you in through the browser, saves your API key to `.env.local` without
+reading it, adds tracing, runs your app on 7 to 10 inputs, and opens your
+traces once they arrive.
+
+Prefer a prompt? Paste this into your agent instead. Nothing to install first:
 
 ```text
 Onboard me to Confident AI. Read and follow https://raw.githubusercontent.com/confident-ai/confident-skills/main/plugins/confident-onboard/skills/confident-onboard/SKILL.md
 ```
-
-Your agent signs you in through the browser, saves your API key to
-`.env.local` without reading it, adds tracing, runs your app on 7 to 10 inputs,
-and confirms the traces arrived.
 
 ## What it does
 
