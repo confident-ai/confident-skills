@@ -610,13 +610,23 @@ def fresh_batch(document):
     return document, len(trace_ids), len(spans)
 
 
+def sample_service(document):
+    """The service.name the sample file declares."""
+    for resource in document.get("resourceSpans", []):
+        for attribute in (resource.get("resource") or {}).get("attributes", []):
+            if attribute.get("key") == "service.name":
+                return (attribute.get("value") or {}).get("stringValue")
+    return None
+
+
 def cmd_seed(args):
     directory = project_dir(args)
     state = load_state(directory)
     key = read_saved_key(directory) or (os.environ.get(KEY_NAME) or "").strip()
     if not key:
         raise Failure("No CONFIDENT_API_KEY in .env.local or the environment.")
-    document, trace_count, span_count = fresh_batch(load_samples(args.file))
+    samples = load_samples(args.file)
+    document, trace_count, span_count = fresh_batch(samples)
     endpoint = args.otel_url or OTEL_ENDPOINTS[region_for_key(key)]
     status, payload = request(
         "POST", endpoint, document, headers={"x-confident-api-key": key}
@@ -632,7 +642,7 @@ def cmd_seed(args):
             "traces": trace_count,
             "spans": span_count - int(rejected or 0),
             "rejectedSpans": int(rejected or 0),
-            "service": "support-agent-sample",
+            "service": sample_service(samples),
             "next": f"Run `verify --expect {trace_count}`.",
         }
     )

@@ -185,13 +185,15 @@ missing and offer these choices:
 2. **Run it later.** Give the exact run command. Tracing stays in place and
    their traces arrive whenever they run it.
 3. **See sample traces now.** Run `onboard seed`. It sends a small set of
-   sample traces from a support agent, 8 requests including a couple of
-   realistic failures, so the user can explore Confident AI right away. Say
+   sample traces from Starhop, an interplanetary travel agent: 20 requests
+   with handoffs between agents, tool calls and retrieval, including seeded
+   failures (wrong tool, wrong arguments, a failing tool, answers that
+   misread a tool result), so the user can explore Confident AI right away. Say
    plainly that these are samples, not their app, and that their own traces
    will appear once they run the command from choice 2.
 
 Choices 1 and 3 continue to step 7; after choice 3 run
-`onboard verify --expect 8`. Choice 2 ends with the final report.
+`onboard verify --expect 20`. Choice 2 ends with the final report.
 
 ### 7. Verify the traces arrived
 
