@@ -25,9 +25,9 @@ Take a user from nothing to their first traces in Confident AI, inside this
 conversation. You do the sign-in plumbing and the code; the user only approves
 the sign-in in their browser and answers a question or two.
 
-The order is fixed: **sign in, choose a project, save the key, instrument, run
-a batch, verify.** Do not skip ahead. Nothing is evaluated here; this is
-tracing.
+The order is fixed: **sign in, choose a project, save the key, set up issue
+detection, instrument, run a batch, verify.** Do not skip ahead. Nothing is
+evaluated here; this is tracing.
 
 ## Safety rules
 
@@ -45,7 +45,8 @@ tracing.
   end must open there too. `login` records which browser that was.
 - The user signs in themselves. Never type into, click through, or fill the
   sign-in page, even in your own browser.
-- Tracing only: no evaluations, metrics, datasets, or refactors.
+- Tracing only: no evaluations, metrics, datasets, or refactors. The one
+  exception is the issues you add in step 5.
 - Do not commit or push.
 
 ## The helper script
@@ -63,7 +64,7 @@ curl -fsSL -o "${TMPDIR:-/tmp}/confident_onboard.py" \
 ```
 
 Read `references/instrument.md` from the same place
-(`.../confident-onboard/references/instrument.md`) when you reach step 5.
+(`.../confident-onboard/references/instrument.md`) when you reach step 6.
 
 Run every command from the application's folder, or pass `--project-dir`.
 Below, `onboard` is short for `python3 <path>/confident_onboard.py`. Use
@@ -92,7 +93,7 @@ Run `onboard check-key`.
 
 ### 3. Sign in
 
-First pick the browser, and use it again in step 7:
+First pick the browser, and use it again in step 8:
 
 - **You have your own built-in browser** (the Claude desktop app's browser
   pane, the Codex app's browser, Cursor's browser): run `onboard login
@@ -139,7 +140,7 @@ Then run `onboard wait`. It waits up to four minutes and exits with:
   - Everything else describes the application, so answer it from the code:
     its stage, single-turn or multi-turn, modalities, whether end users talk
     to it, its tool calls, MCP, or RAG, and its use case. Read enough of the
-    code to answer; you need it for step 5 anyway.
+    code to answer; you need it for steps 5 and 6 anyway.
 
   Show the answers as a short list with each question's `prompt`, and ask the
   user to reply yes or change any. Use only the question's own `options`, and
@@ -157,7 +158,35 @@ Then run `onboard wait`. It waits up to four minutes and exits with:
 key was saved to `.env.local` and kept out of Git. If `complete` fails because
 the login was already used, run `onboard login` again.
 
-### 5. Instrument the application
+### 5. Set up issue detection
+
+Before any trace is sent, give the project's Issues classifier the problems
+this application is most likely to have, so its first traces are checked for
+them as they arrive.
+
+From the code, write 4 to 8 issues. If you reused a key in step 2, read
+enough of the application now. Each is something this app specifically must
+or must not do, drawn from its tools, business rules, policies, and the
+constraints in its prompts:
+
+- `name`: the problem as someone would describe seeing it, such as "Refund
+  approved over policy limit" or "Order status given without a lookup". Never
+  a generic category such as "Hallucination" or "Bad answer".
+- `description`: when it applies, stated as what the trace shows: the input,
+  the tool calls and their results, or the output. The classifying model reads
+  it, so state the condition rather than restating the name.
+- Never mention code, files, functions, variables, or the repository in either
+  field.
+
+Write them as a JSON array of `{"name", "description"}` to a temporary file
+outside the project, then run `onboard labels --file @<file>`. Tell the user
+one line, such as "Set up issue detection for your app." Do not list the issues
+or say where they came from, here or in the final report.
+
+`labels` always exits 0. Whatever it prints, `uploaded` or `failed`, go on to
+step 6. Never retry it and never stop onboarding over it.
+
+### 6. Instrument the application
 
 Read `references/instrument.md` and follow it. It covers the
 `confident-trace` SDK for Python and TypeScript, OpenTelemetry for other
@@ -169,7 +198,7 @@ Carry these values from `complete` or `check-key` into it:
   another project, so the run command must override it with the `.env.local`
   value.
 
-### 6. Run it on 7 to 10 inputs
+### 7. Run it on 7 to 10 inputs
 
 Follow the batch section of `references/instrument.md`: one input first to
 prove tracing works, then the full batch, one input after another, each its
@@ -192,10 +221,10 @@ missing and offer these choices:
    plainly that these are samples, not their app, and that their own traces
    will appear once they run the command from choice 2.
 
-Choices 1 and 3 continue to step 7; after choice 3 run
+Choices 1 and 3 continue to step 8; after choice 3 run
 `onboard verify --expect 20`. Choice 2 ends with the final report.
 
-### 7. Verify the traces arrived
+### 8. Verify the traces arrived
 
 First tell the user you are waiting, in one line such as "Waiting for your
 traces to reach Confident AI. This can take up to three minutes." The command

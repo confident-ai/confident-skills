@@ -14,7 +14,9 @@ Commands, run from the project directory:
   wait                Wait for the browser sign-in, then print the account,
                       its projects, or the new-account questionnaire.
   complete            Create the key for a project and save it to .env.local.
-  seed                Send the bundled sample traces, for when the app cannot
+  labels              Add the issues to watch for to the project's "Issues"
+                      classifier, creating it if missing. Always exits 0.
+  seed              Send the bundled sample traces, for when the app cannot
                       run here. Fresh ids, timed to end now, sent as OTLP JSON.
   verify              Wait for traces sent since the key was saved, then hand
                       off to the web app in the browser used for sign-in.
@@ -705,6 +707,70 @@ def cmd_verify(args):
     )
 
 
+# ---------------------------------------------------------------- labels
+
+# Exactly this name: the classifier every new project is seeded with.
+ISSUES_CLASSIFIER = "Issues"
+PAGE_SIZE = 100
+
+
+def find_or_create_issues_classifier(base, key):
+    """Returns (classifier id, whether it was created)."""
+    headers = {KEY_NAME: key}
+    page = 1
+    while True:
+        query = urllib.parse.urlencode({"dataModel": "TRACE", "page": str(page), "pageSize": str(PAGE_SIZE)})
+        data = data_of(*request("GET", f"{base}/v2/classifiers?{query}", headers=headers))
+        classifiers = data.get("classifiers") or []
+        for classifier in classifiers:
+            if classifier.get("name") == ISSUES_CLASSIFIER:
+                return classifier["id"], False
+        if not classifiers or page * PAGE_SIZE >= (data.get("totalClassifiers") or 0):
+            break
+        page += 1
+    body = {"name": ISSUES_CLASSIFIER, "dataModel": "TRACE", "preset": "ISSUES"}
+    created = data_of(*request("POST", f"{base}/v2/classifiers", body, headers))
+    return created["id"], True
+
+
+def cmd_labels(args):
+    """Never blocks onboarding: every outcome exits 0, and it stops at the first
+    thing that fails."""
+    uploaded = 0
+    try:
+        raw = args.file
+        if raw.startswith("@"):
+            raw = Path(raw[1:]).read_text(encoding="utf-8")
+        try:
+            labels = json.loads(raw)
+        except ValueError as error:
+            raise Failure(f"--file is not valid JSON: {error}")
+        if not isinstance(labels, list) or not all(
+            isinstance(label, dict) and label.get("name") and label.get("description") for label in labels
+        ):
+            raise Failure('--file must be a JSON array of {"name", "description"}.')
+        directory = project_dir(args)
+        key = read_saved_key(directory) or (os.environ.get(KEY_NAME) or "").strip()
+        if not key:
+            raise Failure("No CONFIDENT_API_KEY in .env.local or the environment.")
+        base = api_url(args, {}, key)
+        classifier_id, created = find_or_create_issues_classifier(base, key)
+        for label in labels:
+            body = {
+                "name": label["name"],
+                "description": label["description"],
+                "status": "RECOMMENDED",
+                "enabled": True,
+                "polarity": "LOWER_IS_BETTER",
+            }
+            url = f"{base}/v2/classifiers/{urllib.parse.quote(classifier_id)}/labels"
+            data_of(*request("POST", url, body, {KEY_NAME: key}))
+            uploaded += 1
+    except (Failure, OSError, KeyError, TypeError) as error:
+        emit({"status": "failed", "error": str(error), "uploaded": uploaded, "next": "Continue onboarding."})
+    emit({"status": "uploaded", "classifierId": classifier_id, "created": created, "labels": uploaded})
+
+
 # ---------------------------------------------------------------- main
 
 
@@ -731,6 +797,8 @@ def main():
     complete = sub.add_parser("complete")
     complete.add_argument("--project-id")
     complete.add_argument("--answers", help="JSON object, or @file containing one")
+    labels = sub.add_parser("labels")
+    labels.add_argument("--file", required=True, help='JSON array of {"name", "description"}, or @file containing one')
     seed = sub.add_parser("seed")
     seed.add_argument("--file", help="sample traces file (default: the bundled one, else GitHub)")
     seed.add_argument("--otel-url", help=argparse.SUPPRESS)
@@ -745,6 +813,7 @@ def main():
         "login": cmd_login,
         "wait": cmd_wait,
         "complete": cmd_complete,
+        "labels": cmd_labels,
         "seed": cmd_seed,
         "verify": cmd_verify,
     }
