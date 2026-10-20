@@ -9,10 +9,13 @@ Commands, run from the project directory:
 
   check-key           Is there already a working key? Prints its status only.
   login               Start a browser sign-in. Prints the link and code.
+                      --browser says who opens it: system (this script, the
+                      default), agent (the agent's own browser), or manual.
   wait                Wait for the browser sign-in, then print the account,
                       its projects, or the new-account questionnaire.
   complete            Create the key for a project and save it to .env.local.
-  verify              Wait for traces sent since the key was saved.
+  verify              Wait for traces sent since the key was saved, then hand
+                      off to the web app in the browser used for sign-in.
 
 Every command prints one JSON object on stdout. Exit codes: 0 done, 1 error,
 2 still waiting (run `wait` again).
@@ -53,6 +56,10 @@ OTEL_ENDPOINTS = {
 WAIT_SLICE_SECONDS = 240
 VERIFY_INTERVAL_SECONDS = 5
 VERIFY_TIMEOUT_SECONDS = 180
+# Who opens links. Sign-in and the handoff after traces arrive must use the
+# same browser, because that browser holds the Confident AI session.
+BROWSERS = ("agent", "system", "manual")
+SAME_BROWSER = "Open handoffUrl in the same browser you used for sign-in."
 
 
 class Failure(Exception):
@@ -279,6 +286,20 @@ def traces_url(app_url, project_id):
     return f"{app_url}/project/{urllib.parse.quote(project_id)}/observatory/traces"
 
 
+def handoff_url(app_url, state):
+    """New accounts finish onboarding in the web app; others see their traces."""
+    if state.get("account") == "new":
+        return f"{app_url}/onboarding"
+    return traces_url(app_url, state.get("projectId"))
+
+
+def open_browser(url):
+    try:
+        return bool(webbrowser.open(url))
+    except Exception:
+        return False
+
+
 def utc_iso(moment):
     return moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
@@ -309,6 +330,8 @@ def cmd_check_key(args):
         {
             "apiUrl": api_url(args, {}, key),
             "appUrl": APP_URL,
+            "account": "reused",
+            "browser": "system",
             "since": utc_iso(datetime.now(timezone.utc) - timedelta(minutes=1)),
         }
     )
@@ -328,6 +351,7 @@ def cmd_check_key(args):
 
 def cmd_login(args):
     directory = project_dir(args)
+    browser = "manual" if args.no_browser else args.browser
     base = api_url(args, {})
     context = {"source": SOURCE}
     if args.org_id:
@@ -347,22 +371,23 @@ def cmd_login(args):
             "deviceCode": session["deviceCode"],
             "interval": session["interval"],
             "expiresAt": time.time() + float(session["expiresIn"]),
+            "browser": browser,
         },
     )
-    opened = False
-    if not args.no_browser:
-        try:
-            opened = webbrowser.open(session["verificationUriComplete"])
-        except Exception:
-            opened = False
+    opened = browser == "system" and open_browser(session["verificationUriComplete"])
     emit(
         {
             "status": "pending",
             "url": session["verificationUriComplete"],
             "code": session["userCode"],
+            "browser": browser,
             "browserOpened": opened,
             "expiresInMinutes": round(float(session["expiresIn"]) / 60),
-            "next": "Show the user the url and code, then run `wait`.",
+            "next": (
+                "Open the url in your own browser, show the user the code, then run `wait`."
+                if browser == "agent"
+                else "Show the user the url and code, then run `wait`."
+            ),
         }
     )
 
@@ -417,6 +442,9 @@ def cmd_wait(args):
         )
     )
     kind = onboarding.get("state")
+    if kind in ("new_user", "existing_user"):
+        state["account"] = "new" if kind == "new_user" else "existing"
+        save_state(directory, state)
     if kind == "new_user":
         state["questionnaireVersion"] = onboarding["questionnaire"]["version"]
         save_state(directory, state)
@@ -552,21 +580,35 @@ def cmd_verify(args):
         if time.time() >= deadline:
             break
         time.sleep(VERIFY_INTERVAL_SECONDS)
+    if not found:
+        emit(
+            {
+                "status": "timeout",
+                "traceCount": 0,
+                "traces": [],
+                "since": since,
+                "tracesUrl": link,
+                "message": "No traces yet. Ingestion can take a couple of minutes; run `verify` again, "
+                "then check the run command loaded .env.local and flushed tracing before exit.",
+            },
+            2,
+        )
+    browser = state.get("browser") or "system"
+    handoff = handoff_url(app_url, state)
+    remote = os.environ.get("SSH_CONNECTION") or os.environ.get("CI")
+    opened = browser == "system" and not remote and open_browser(handoff)
     emit(
         {
-            "status": "found" if found else "timeout",
+            "status": "found",
             "traceCount": len(found),
             "traces": [t.get("name") or t.get("uuid") for t in found],
             "since": since,
             "tracesUrl": link,
-            "message": (
-                None
-                if found
-                else "No traces yet. Ingestion can take a couple of minutes; run `verify` again, "
-                "then check the run command loaded .env.local and flushed tracing before exit."
-            ),
-        },
-        0 if found else 2,
+            "handoffUrl": handoff,
+            "browser": browser,
+            "browserOpened": opened,
+            "next": None if opened else SAME_BROWSER,
+        }
     )
 
 
@@ -582,7 +624,13 @@ def main():
 
     sub.add_parser("check-key")
     login = sub.add_parser("login")
-    login.add_argument("--no-browser", action="store_true")
+    login.add_argument(
+        "--browser",
+        choices=BROWSERS,
+        default="system",
+        help="who opens the sign-in link: system (default browser), agent, or manual",
+    )
+    login.add_argument("--no-browser", action="store_true", help="same as --browser manual")
     login.add_argument("--org-id")
     login.add_argument("--proj-id")
     wait = sub.add_parser("wait")

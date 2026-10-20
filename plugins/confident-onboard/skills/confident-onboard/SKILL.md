@@ -40,6 +40,11 @@ tracing.
   are fine to show.
 - Never hardcode the key or add it to `.env` or any file other than
   `.env.local`.
+- **Sign-in and the handoff use the same browser.** The browser the user signs
+  in with holds their Confident AI session, so the link `verify` prints at the
+  end must open there too. `login` records which browser that was.
+- The user signs in themselves. Never type into, click through, or fill the
+  sign-in page, even in your own browser.
 - Tracing only: no evaluations, metrics, datasets, or refactors.
 - Do not commit or push.
 
@@ -87,12 +92,24 @@ Run `onboard check-key`.
 
 ### 3. Sign in
 
-Run `onboard login`. It opens the browser and prints a `url` and a `code`.
-Show them to the user in a short message on their own lines, for example:
+First pick the browser, and use it again in step 7:
+
+- **You have your own built-in browser** (the Claude desktop app's browser
+  pane, the Codex app's browser, Cursor's browser): run `onboard login
+  --browser agent`, then open the `url` it prints in that browser.
+- **Otherwise**: run `onboard login`. The script opens the user's default
+  browser.
+- **Neither can open it** (an SSH or remote session): run `onboard login
+  --browser manual` and show the user the link to open themselves.
+
+`login` prints a `url` and a `code`. Show them to the user in a short message
+on their own lines, for example:
 
 > Approve the sign-in in your browser. If it did not open, go to:
 > <url>
 > Check that it shows this code: **<code>**
+
+The user signs in and approves it there; you only open the page.
 
 Then run `onboard wait`. It waits up to four minutes and exits with:
 
@@ -156,7 +173,17 @@ Run `onboard verify`. It polls for up to three minutes for traces sent since
 the key was saved and stops once it sees 7. Pass `--expect <n>` if you ran a
 different number.
 
-- `0` and `status: found`: report `traceCount` and `tracesUrl`.
+- `0` and `status: found`: open `handoffUrl` in the browser `verify` reports
+  in `browser`, the same one used for sign-in:
+  - `agent`: open it in your own browser pane.
+  - `system`: the script already opened it (`browserOpened: true`). If it
+    could not, show the user the link.
+  - `manual`: show the user the link to open in the browser they signed in
+    with.
+
+  For a new account `handoffUrl` is the web app's onboarding page, which shows
+  the traces arriving and then lands on the traces page. Otherwise it is the
+  project's traces page.
 - `2` and `status: timeout`: ingestion can lag. Run `onboard verify` once more.
   If still nothing, check that the run command loaded `.env.local`, that an EU
   key had its endpoint set, and that tracing was flushed or shut down before
@@ -167,14 +194,20 @@ Never claim traces arrived unless `verify` found them.
 
 ## Final report
 
-Tell the user, in a few plain sentences:
+Keep it short and celebratory, in plain sentences with no emoji. When traces
+arrived, lead with the win, for example:
 
-- which project the key belongs to, and that it is saved in `.env.local` and
-  ignored by Git;
-- the files you changed and the integrations you used;
+> You're all set: 8 traces from your app reached Confident AI.
+> <handoffUrl>
+
+Then, briefly:
+
 - the run command, on its own line, to send more traces;
-- how many traces arrived, with the `tracesUrl` link to open them;
+- which project the key belongs to, saved in `.env.local` and ignored by Git;
+- the files you changed and the integrations you used;
 - anything left for them to do, such as a secret to provide.
+
+If traces did not arrive, say so plainly instead, with what to check.
 
 Leave every change in place on failure. Do not remove instrumentation or the
 key.
