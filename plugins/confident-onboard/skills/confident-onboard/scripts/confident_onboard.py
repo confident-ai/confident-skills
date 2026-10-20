@@ -14,6 +14,8 @@ Commands, run from the project directory:
   wait                Wait for the browser sign-in, then print the account,
                       its projects, or the new-account questionnaire.
   complete            Create the key for a project and save it to .env.local.
+  seed                Send the bundled sample traces, for when the app cannot
+                      run here. Fresh ids, timed to end now, sent as OTLP JSON.
   verify              Wait for traces sent since the key was saved, then hand
                       off to the web app in the browser used for sign-in.
 
@@ -27,6 +29,7 @@ import argparse
 import hashlib
 import json
 import os
+import secrets
 import ssl
 import sys
 import tempfile
@@ -60,6 +63,10 @@ VERIFY_TIMEOUT_SECONDS = 180
 # same browser, because that browser holds the Confident AI session.
 BROWSERS = ("agent", "system", "manual")
 SAME_BROWSER = "Open handoffUrl in the same browser you used for sign-in."
+SAMPLES_URL = (
+    "https://raw.githubusercontent.com/confident-ai/confident-skills/main/"
+    "plugins/confident-onboard/skills/confident-onboard/assets/sample-traces.json"
+)
 
 
 class Failure(Exception):
@@ -155,6 +162,9 @@ def request(method, url, body=None, headers=None):
 def error_message(status, payload):
     if isinstance(payload, dict) and isinstance(payload.get("error"), str):
         return f"{payload['error']} (HTTP {status})"
+    # OTLP errors carry a google.rpc.Status: {"code": ..., "message": ...}.
+    if isinstance(payload, dict) and isinstance(payload.get("message"), str):
+        return f"{payload['message']} (HTTP {status})"
     return f"Confident AI request failed (HTTP {status})."
 
 
@@ -453,8 +463,12 @@ def cmd_wait(args):
                 "status": "signed_in",
                 "account": "new",
                 "email": state.get("email"),
+                "name": (onboarding.get("user") or {}).get("name"),
                 "questions": onboarding["questionnaire"]["questions"],
-                "next": "Ask the user each question, then run `complete --answers '<json>'`.",
+                "next": (
+                    "Fill in every answer from the sign-in details and the code, show them to "
+                    "the user in one message to confirm, then run `complete --answers '<json>'`."
+                ),
             }
         )
     if kind != "existing_user":
@@ -555,6 +569,75 @@ def cmd_complete(args):
     )
 
 
+def load_samples(path):
+    """The sample file next to this skill, or the published copy on GitHub."""
+    local = Path(path) if path else Path(__file__).resolve().parent.parent / "assets" / "sample-traces.json"
+    if local.is_file():
+        return json.loads(local.read_text(encoding="utf-8"))
+    if path:
+        raise Failure(f"{local} does not exist.")
+    status, payload = request("GET", SAMPLES_URL)
+    if status >= 400 or not isinstance(payload, dict):
+        raise Failure(error_message(status, payload))
+    return payload
+
+
+def fresh_batch(document):
+    """New trace and span ids, parents kept, and the batch shifted to end now."""
+    document = {key: value for key, value in document.items() if key == "resourceSpans"}
+    spans = [
+        span
+        for resource in document.get("resourceSpans", [])
+        for scope in resource.get("scopeSpans", [])
+        for span in scope.get("spans", [])
+    ]
+    if not spans:
+        raise Failure("The sample file has no spans.")
+    trace_ids, span_ids = {}, {}
+    for span in spans:
+        trace_ids.setdefault(span["traceId"], secrets.token_hex(16))
+        span_ids.setdefault(span["spanId"], secrets.token_hex(8))
+    offset = time.time_ns() - max(int(span["endTimeUnixNano"]) for span in spans)
+    for span in spans:
+        span["traceId"] = trace_ids[span["traceId"]]
+        span["spanId"] = span_ids[span["spanId"]]
+        if span.get("parentSpanId"):
+            span["parentSpanId"] = span_ids[span["parentSpanId"]]
+        for field in ("startTimeUnixNano", "endTimeUnixNano"):
+            span[field] = str(int(span[field]) + offset)
+        for event in span.get("events", []):
+            event["timeUnixNano"] = str(int(event["timeUnixNano"]) + offset)
+    return document, len(trace_ids), len(spans)
+
+
+def cmd_seed(args):
+    directory = project_dir(args)
+    state = load_state(directory)
+    key = read_saved_key(directory) or (os.environ.get(KEY_NAME) or "").strip()
+    if not key:
+        raise Failure("No CONFIDENT_API_KEY in .env.local or the environment.")
+    document, trace_count, span_count = fresh_batch(load_samples(args.file))
+    endpoint = args.otel_url or OTEL_ENDPOINTS[region_for_key(key)]
+    status, payload = request(
+        "POST", endpoint, document, headers={"x-confident-api-key": key}
+    )
+    if status >= 400:
+        raise Failure(error_message(status, payload))
+    rejected = ((payload or {}).get("partialSuccess") or {}).get("rejectedSpans") if isinstance(payload, dict) else None
+    state["sampleTraces"] = True
+    save_state(directory, state)
+    emit(
+        {
+            "status": "sent",
+            "traces": trace_count,
+            "spans": span_count - int(rejected or 0),
+            "rejectedSpans": int(rejected or 0),
+            "service": "support-agent-sample",
+            "next": f"Run `verify --expect {trace_count}`.",
+        }
+    )
+
+
 def cmd_verify(args):
     directory = project_dir(args)
     state = load_state(directory)
@@ -638,6 +721,9 @@ def main():
     complete = sub.add_parser("complete")
     complete.add_argument("--project-id")
     complete.add_argument("--answers", help="JSON object, or @file containing one")
+    seed = sub.add_parser("seed")
+    seed.add_argument("--file", help="sample traces file (default: the bundled one, else GitHub)")
+    seed.add_argument("--otel-url", help=argparse.SUPPRESS)
     verify = sub.add_parser("verify")
     verify.add_argument("--since", help="ISO time; default: when the key was saved")
     verify.add_argument("--expect", type=int, default=7, help="stop early at this many traces")
@@ -649,6 +735,7 @@ def main():
         "login": cmd_login,
         "wait": cmd_wait,
         "complete": cmd_complete,
+        "seed": cmd_seed,
         "verify": cmd_verify,
     }
     try:

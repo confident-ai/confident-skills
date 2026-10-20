@@ -218,7 +218,7 @@ Prefer an existing batch, eval, or test runner if there is one.
   production data. If the only entry point would, stop and tell the user.
 - If the run needs secrets or services you do not have, such as a model
   provider key, do not fake them, mock the model, or stub the call. Stop and
-  tell the user exactly what is needed and the exact command to run.
+  ask the user how to continue, with the choices in step 6 of `SKILL.md`.
 - Run one input first. If it fails because of your tracing change, fix it and
   try once more. Then run the whole batch, once.
 - The run command you give the user must work pasted into a fresh shell in this
