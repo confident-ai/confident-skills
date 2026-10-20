@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PLUGINS = {"confident-trace", "confident-client", "confident-eval-setup"}
+PLUGINS = {"confident-onboard", "confident-trace", "confident-client", "confident-eval-setup"}
 MARKETPLACES = [
     ".claude-plugin/marketplace.json",
     ".cursor-plugin/marketplace.json",

@@ -4,8 +4,14 @@
     "name": "Confident AI",
     "email": "open-source@confident-ai.com"
   },
-  "description": "Confident AI agent skills for AI tracing, eval setup, and the Confident AI API. For Claude Code.",
+  "description": "Confident AI agent skills for onboarding, AI tracing, eval setup, and the Confident AI API. For Claude Code.",
   "plugins": [
+    {
+      "name": "confident-onboard",
+      "source": "./plugins/confident-onboard",
+      "description": "Onboard to Confident AI from your coding agent: sign in through the browser, save the API key without exposing it, add tracing, run your app on a batch of inputs, and confirm the traces arrived.",
+      "category": "developer-tools"
+    },
     {
       "name": "confident-trace",
       "source": "./plugins/confident-trace",

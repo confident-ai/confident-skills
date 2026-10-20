@@ -2,14 +2,29 @@
 
 # `confident-skills`: Agent Skills for Confident AI
 
-Confident Skills helps coding agents instrument AI applications, export
-OpenTelemetry traces, migrate from Langfuse, set up evals, and work with the
-Confident AI API. Install the plugins
-in Claude Code, Cursor, or Codex to give your agent the setup instructions,
-reference material, and templates for each task.
+Confident Skills helps coding agents onboard users to Confident AI, instrument
+AI applications, export OpenTelemetry traces, migrate from Langfuse, set up
+evals, and work with the Confident AI API. Install the plugins in Claude Code,
+Cursor, or Codex to give your agent the setup instructions, reference material,
+and templates for each task.
+
+## Get started in one paste
+
+New to Confident AI? Paste this into Claude Code, Cursor, Codex, or any coding
+agent, from your AI app's folder. Nothing to install first:
+
+```text
+Onboard me to Confident AI. Read and follow https://raw.githubusercontent.com/confident-ai/confident-skills/main/plugins/confident-onboard/skills/confident-onboard/SKILL.md
+```
+
+Your agent signs you in through the browser, saves your API key to
+`.env.local` without reading it, adds tracing, runs your app on 7 to 10 inputs,
+and confirms the traces arrived.
 
 ## What it does
 
+- **Onboarding:** sign in, choose or create a project, save the key, add
+  tracing, and see your first traces, all from your coding agent.
 - **AI tracing:** add the
   [`confident-trace`](https://github.com/confident-ai/confident-trace) SDK to
   your application, using supported integrations and custom spans.
@@ -30,6 +45,7 @@ project needs.
 
 | Plugin | Included skills | Purpose |
 | --- | --- | --- |
+| [`confident-onboard`](plugins/confident-onboard) | `confident-onboard` | Sign in, save a key, add tracing, and confirm your first traces. |
 | [`confident-trace`](plugins/confident-trace) | `confident-tracing`, `confident-otel`, `confident-migrate-langfuse` | Instrument AI applications, configure trace export, and migrate from Langfuse. |
 | [`confident-eval-setup`](plugins/confident-eval-setup) | `confident-eval-setup` | Connect your app and upload a dataset so Confident AI can evaluate it. Needs the Confident AI MCP server. |
 | [`confident-client`](plugins/confident-client) | `confident-client` | Work with the Confident AI platform through its SDK. |
@@ -40,6 +56,7 @@ project needs.
 
 ```
 /plugin marketplace add confident-ai/confident-skills
+/plugin install confident-onboard@confident-skills
 /plugin install confident-trace@confident-skills
 /plugin install confident-eval-setup@confident-skills
 /plugin install confident-client@confident-skills
@@ -51,8 +68,8 @@ project needs.
 codex plugin marketplace add confident-ai/confident-skills
 ```
 
-Then run `/plugins` in Codex and install `confident-trace`,
-`confident-eval-setup`, or `confident-client`.
+Then run `/plugins` in Codex and install `confident-onboard`,
+`confident-trace`, `confident-eval-setup`, or `confident-client`.
 
 ### Cursor
 
