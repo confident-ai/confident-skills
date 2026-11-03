@@ -138,8 +138,8 @@ Then run `onboard wait`. It waits up to four minutes and exits with:
   - The project: the application's name from its README, package manifest, or
     folder, else the question's `defaultValue`.
   - Everything else describes the application, so answer it from the code:
-    its stage, single-turn or multi-turn, modalities, whether end users talk
-    to it, its tool calls, MCP, or RAG, and its use case. Read enough of the
+    its stage, single-turn or multi-turn, modalities (a voice agent's include
+    audio), whether end users talk to it, its tool calls, MCP, or RAG, and its use case. Read enough of the
     code to answer; you need it for steps 5 and 6 anyway.
 
   Show the answers as a short list with each question's `prompt`, and ask the
@@ -175,6 +175,10 @@ constraints in its prompts:
 - `description`: when it applies, stated as what the trace shows: the input,
   the tool calls and their results, or the output. The classifying model reads
   it, so state the condition rather than restating the name.
+- For a voice agent, include what a caller would hear go wrong, such as a
+  long silence before the agent answers, the agent talking over the caller, a
+  misheard name, number, or date taken as confirmed, or an answer that only
+  works written down, such as a list, link, or code read aloud.
 - Never mention code, files, functions, variables, or the repository in either
   field.
 
@@ -204,6 +208,10 @@ Follow the batch section of `references/instrument.md`: one input first to
 prove tracing works, then the full batch, one input after another, each its
 own trace. Never fake a run, mock the model, or stub a call.
 
+A voice agent gets test calls instead: follow "A voice agent" in that section.
+The user makes the calls, then run `onboard verify --expect <n>` with the
+number of traces they sent: one per call for LiveKit and Pipecat.
+
 If the app cannot run because a secret or service is missing, most often a
 model provider key, stop and ask the user how to continue. Name exactly what is
 missing and offer these choices:
@@ -219,7 +227,8 @@ missing and offer these choices:
    failures (wrong tool, wrong arguments, a failing tool, answers that
    misread a tool result), so the user can explore Confident AI right away. Say
    plainly that these are samples, not their app, and that their own traces
-   will appear once they run the command from choice 2.
+   will appear once they run the command from choice 2. For a voice agent, say
+   too that the samples are text, with no call audio.
 
 Choices 1 and 3 continue to step 8; after choice 3 run
 `onboard verify --expect 20`. Choice 2 ends with the final report.
@@ -266,6 +275,8 @@ Then, briefly:
 - the run command, on its own line, to send more traces;
 - which project the key belongs to, saved in `.env.local` and ignored by Git;
 - the files you changed and the integrations you used;
+- for a voice agent, whether its calls are now recorded and where to turn that
+  off, or why they are not;
 - anything left for them to do, such as a secret to provide.
 
 If traces did not arrive, say so plainly instead, with what to check.
