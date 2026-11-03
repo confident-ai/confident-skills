@@ -28,8 +28,13 @@ anything here is unclear:
 2. For each application, note its language and runtime version, package
    manager, entry point, and the LLM providers and frameworks it calls, such as
    OpenAI, Anthropic, LangChain, LangGraph, LlamaIndex, CrewAI, Pydantic AI,
-   the OpenAI Agents SDK, the Vercel AI SDK, or Mastra. Note whether its code
-   is bundled and whether it already sets up OpenTelemetry.
+   the OpenAI Agents SDK, the Vercel AI SDK, Mastra, LiveKit Agents, or
+   Pipecat. Note whether its code is bundled and whether it already sets up
+   OpenTelemetry.
+   Note whether it is a voice agent: it takes calls or speech, through LiveKit,
+   Pipecat, a telephony provider, a realtime speech model, or its own
+   speech-to-text and text-to-speech. A voice agent also follows
+   [Voice agents](#voice-agents).
 3. If nothing here calls an LLM, retrieves documents, or uses tools, stop and
    tell the user.
 4. Python, JavaScript, and TypeScript use `confident-trace`. Any other language
@@ -148,6 +153,89 @@ invent one.
 - TypeScript: `updateTrace({ threadId, userId })`, or
   `await turn({ threadId, turnId }, async () => { ... })`.
 
+### Voice agents
+
+A voice agent's traces need the call audio: Confident AI plays back each call
+and each turn, and its classifiers and voice metrics listen to it. Capture the
+audio the application already has. Never generate, synthesize, or fake audio.
+
+**LiveKit Agents** (Python and TypeScript). `init()` instruments it, and each
+call becomes one trace. Read
+https://www.confident-ai.com/docs/integrations/third-party/livekit first.
+
+- Call `init()` at module scope in the file LiveKit loads for each job. LiveKit
+  runs jobs in separate worker processes, so `init()` inside the entrypoint or
+  only under `if __name__ == "__main__":` misses them.
+- TypeScript also needs the preload in the worker's start command:
+  `node --import confident-trace/register dist/agent.js dev`.
+- Record the call: pass `record=True` to `session.start()` (`record: true` in
+  TypeScript). The SDK uploads the recording to the call's trace when the job
+  ends.
+
+**Pipecat** (Python). `init()` instruments it, and each call becomes one trace.
+Read https://www.confident-ai.com/docs/integrations/third-party/pipecat first.
+
+- Call `init()` at module scope, before the pipeline is built. Pipecat's own
+  `setup_tracing()` and `enable_tracing=True` are not needed.
+- Record the call: add
+  `AudioBufferProcessor(num_channels=2, auto_start_recording=True)` from
+  `pipecat.processors.audio.audio_buffer_processor` to the pipeline right after
+  `transport.output()`. If the pipeline already has one, keep it and add no
+  second one. The SDK uploads the recording when the pipeline ends.
+
+For both, recordings upload only over the default OTLP HTTP export with
+content capture on: do not pass `capture_content=False`, set
+`LIVEKIT_TELEMETRY_ALLOW_PII=0`, or swap in a gRPC exporter. Recordings over
+18 MB are skipped. If the code deliberately leaves recording off, such as
+`record=False` or recording only after consent, keep it that way and tell the
+user.
+
+**Any other voice agent** (a telephony webhook, a realtime speech model, or its
+own speech-to-text and text-to-speech). `init()` traces its model calls. Wrap
+each turn in a span and attach that turn's audio to its messages with `Media`:
+
+```python
+from confident_trace import Media
+
+ct.update_span(
+    input={
+        "role": "user",
+        "content": transcript,
+        "audio": Media.from_bytes(user_clip, "audio/wav"),
+    },
+    output={
+        "role": "assistant",
+        "content": reply,
+        "audio": Media.from_bytes(agent_clip, "audio/mpeg"),
+    },
+)
+```
+
+```ts
+import { Media, updateSpan } from "confident-trace";
+
+updateSpan({
+  input: {
+    role: "user",
+    content: transcript,
+    audio: Media.fromBytes(userClip, "audio/wav"),
+  },
+  output: {
+    role: "assistant",
+    content: reply,
+    audio: Media.fromBytes(agentClip, "audio/mpeg"),
+  },
+});
+```
+
+- The user clip is the audio sent to speech-to-text; the agent clip is what
+  text-to-speech returned. Use bytes the code already holds.
+- Always pass the media type. Wrap raw PCM in a WAV container first, such as
+  with Python's `wave` module, or it cannot be played.
+- Confident AI uploads the bytes itself. Do not add a bucket or upload step.
+- Group a call's turns into a thread with the call's own id, such as the call
+  SID, room name, or session id, as in Threads and users.
+
 ## Any other language: OpenTelemetry
 
 Use the language's own OpenTelemetry SDK. Before writing code, open
@@ -223,3 +311,22 @@ Prefer an existing batch, eval, or test runner if there is one.
   try once more. Then run the whole batch, once.
 - The run command you give the user must work pasted into a fresh shell in this
   folder, load the key as above, and never contain the key itself.
+
+### A voice agent
+
+A voice agent answers calls, so it usually cannot be driven from a script.
+Never synthesize speech, play audio files into it, or fake a caller to make a
+batch. Instead:
+
+1. Start the agent in the background the way the project runs it in
+   development, such as `python agent.py dev`, loading the key as above.
+2. Ask the user to make one or two test calls of a few turns each, through
+   what they already use to talk to it: LiveKit's Agents Playground, the link
+   Pipecat's development runner prints, or the app's phone number.
+3. Once they hang up, stop the agent gracefully, never with a forced kill, so
+   the last spans and the recording upload.
+
+LiveKit and Pipecat send one trace per call; other voice agents usually send
+one per turn. If the agent cannot start because its LiveKit, telephony, or
+model credentials are missing, that is the missing-secret case in step 7 of
+`SKILL.md`.
