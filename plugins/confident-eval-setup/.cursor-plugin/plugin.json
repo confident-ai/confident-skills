@@ -2,7 +2,7 @@
   "name": "confident-eval-setup",
   "displayName": "Confident AI Eval Setup",
   "version": "1.0.0",
-  "description": "Skills for getting an LLM app ready to evaluate on Confident AI: create and verify an AI connection over the Confident AI MCP server and upload a dataset.",
+  "description": "Skills for getting an LLM app ready to evaluate on Confident AI: create and verify an AI connection over the Confident AI MCP server, connect an app with no endpoint through the Confident Agent's handler mode, and upload a dataset.",
   "author": {
     "name": "Confident AI",
     "email": "open-source@confident-ai.com"
@@ -16,6 +16,8 @@
     "evaluation",
     "ai-connections",
     "datasets",
+    "confident-agent",
+    "handler-mode",
     "mcp"
   ],
   "category": "developer-tools",
