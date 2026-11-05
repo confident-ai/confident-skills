@@ -42,6 +42,9 @@ Onboard me to Confident AI. Read and follow https://raw.githubusercontent.com/co
 - **Eval setup:** connect your app to Confident AI as an AI connection,
   verify it with a ping, and upload a dataset ready to evaluate, all through
   the Confident AI MCP server.
+- **Agent handler:** connect an app with no HTTP endpoint through the
+  Confident Agent's handler mode: write the handler that calls your pipeline,
+  run the agent beside it, and verify the connection with a ping.
 - **Platform management:** use the `confident-ai` SDK to manage organizations,
   projects, members, roles, governance policies, and API keys.
 
@@ -54,7 +57,7 @@ project needs.
 | --- | --- | --- |
 | [`confident-onboard`](plugins/confident-onboard) | `confident-onboard` | Sign in, save a key, add tracing, and confirm your first traces. |
 | [`confident-trace`](plugins/confident-trace) | `confident-tracing`, `confident-otel`, `confident-migrate-langfuse` | Instrument AI applications, configure trace export, and migrate from Langfuse. |
-| [`confident-eval-setup`](plugins/confident-eval-setup) | `confident-eval-setup` | Connect your app and upload a dataset so Confident AI can evaluate it. Needs the Confident AI MCP server. |
+| [`confident-eval-setup`](plugins/confident-eval-setup) | `confident-eval-setup`, `confident-agent-handler` | Connect your app, with or without an endpoint, and upload a dataset so Confident AI can evaluate it. Needs the Confident AI MCP server. |
 | [`confident-client`](plugins/confident-client) | `confident-client` | Work with the Confident AI platform through its SDK. |
 
 ## Install
