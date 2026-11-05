@@ -9,8 +9,9 @@ description: >
   Confident AI dataset of goldens so the platform can evaluate the app. DO NOT
   TRIGGER to instrument an app or send traces (use the `confident-tracing` or
   `confident-otel` skill), to manage organizations, projects, members, or API
-  keys (use the `confident-client` skill), or to write a local eval script that
-  calls the app directly, which needs no AI connection.
+  keys (use the `confident-client` skill), to connect an app that has no HTTP
+  endpoint (use the `confident-agent-handler` skill), or to write a local eval
+  script that calls the app directly, which needs no AI connection.
 license: Apache-2.0
 metadata:
   author: Confident AI
@@ -53,6 +54,7 @@ they still want the platform set up.
   app. `localhost` and private hosts are not reachable. For an app behind a
   firewall, point the user to the Confident Agent
   (https://www.confident-ai.com/docs/llm-evaluation/ai-connections/confident-agent).
+  For an app with no endpoint at all, use the `confident-agent-handler` skill.
 
 ## Workflow
 
