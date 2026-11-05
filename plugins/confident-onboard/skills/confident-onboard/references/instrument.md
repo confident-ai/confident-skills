@@ -28,8 +28,8 @@ anything here is unclear:
 2. For each application, note its language and runtime version, package
    manager, entry point, and the LLM providers and frameworks it calls, such as
    OpenAI, Anthropic, LangChain, LangGraph, LlamaIndex, CrewAI, Pydantic AI,
-   the OpenAI Agents SDK, the Vercel AI SDK, Mastra, LiveKit Agents, or
-   Pipecat. Note whether its code is bundled and whether it already sets up
+   the OpenAI Agents SDK, the Vercel AI SDK, Mastra, Google ADK, Spring AI,
+   LiveKit Agents, or Pipecat. Note whether its code is bundled and whether it already sets up
    OpenTelemetry.
    Note whether it is a voice agent: it takes calls or speech, through LiveKit,
    Pipecat, a telephony provider, a realtime speech model, or its own
@@ -38,7 +38,8 @@ anything here is unclear:
 3. If nothing here calls an LLM, retrieves documents, or uses tools, stop and
    tell the user.
 4. Python, JavaScript, and TypeScript use `confident-trace`. Any other language
-   uses OpenTelemetry.
+   uses OpenTelemetry: export the spans an OpenTelemetry-native framework
+   already emits, or add spans manually.
 
 ## Python, JavaScript, and TypeScript: `confident-trace`
 
@@ -247,10 +248,33 @@ three values. If the page does not confirm all three, stop and tell the user.
   `OTEL_EXPORTER_OTLP_ENDPOINT`, give the base URL without `/v1/traces`.
 - Header: `x-confident-api-key`, read from `CONFIDENT_API_KEY` at runtime.
 
-Attach the exporter through a batch span processor, wrap the AI components in
-spans with `confident.span.type` (`llm`, `tool`, `agent`, `retriever`, or
-`base`) and `confident.span.input` / `confident.span.output` as strings, and
-flush before a short-lived process exits.
+Attach the exporter through a batch span processor and flush before a
+short-lived process exits. Then pick one of the two cases below.
+
+### An OpenTelemetry-native framework
+
+Some frameworks emit their own OpenTelemetry spans, and Confident AI maps them
+into agent, LLM, and tool spans on arrival. For these, export the spans the
+framework already emits and add no spans of your own:
+
+| Framework | Languages | How Confident AI recognises its spans |
+| --- | --- | --- |
+| Google ADK | Go, Java | `gcp.vertex.agent.*` attributes |
+| Spring AI | Java | `spring.ai.kind`, or `gen_ai.*` spans from the Spring Boot instrumentation scope |
+
+Turn on the framework's own tracing as its docs describe, register the
+exporter above on the tracer provider it uses (usually the global one, set
+before the framework starts), and run the batch. In the traces, check that
+the spans show as agent, LLM, and tool spans with their inputs and outputs. If
+they arrive as plain spans without them, the framework is not emitting what
+Confident AI maps: add spans manually around the gaps, as below.
+
+### Any other framework: manual spans
+
+A framework not in the table is instrumented by hand, even if it emits
+OpenTelemetry of its own. Wrap the AI components in spans with
+`confident.span.type` (`llm`, `tool`, `agent`, `retriever`, or `base`) and
+`confident.span.input` / `confident.span.output` as strings.
 
 ## Load the key without reading it
 
