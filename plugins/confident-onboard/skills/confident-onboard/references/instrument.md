@@ -262,12 +262,34 @@ framework already emits and add no spans of your own:
 | Google ADK | Go, Java | `gcp.vertex.agent.*` attributes |
 | Spring AI | Java | `spring.ai.kind`, or `gen_ai.*` spans from the Spring Boot instrumentation scope |
 
-Turn on the framework's own tracing as its docs describe, register the
-exporter above on the tracer provider it uses (usually the global one, set
-before the framework starts), and run the batch. In the traces, check that
-the spans show as agent, LLM, and tool spans with their inputs and outputs. If
-they arrive as plain spans without them, the framework is not emitting what
-Confident AI maps: add spans manually around the gaps, as below.
+Turn on the framework's own tracing, register the exporter above on the
+tracer provider it uses (the global one, set before the framework starts), and
+run the batch:
+
+- **Google ADK for Go.** Call `telemetry.New(ctx)` from
+  `google.golang.org/adk/telemetry` (`google.golang.org/adk/v2/telemetry` on
+  v2), then `SetGlobalOtelProviders()` on the result, and defer its
+  `Shutdown(ctx)`. ADK builds the OTLP/HTTP exporter itself from
+  `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` (the full endpoint, with `/v1/traces`)
+  and `OTEL_EXPORTER_OTLP_HEADERS`. Set the traces variable, not
+  `OTEL_EXPORTER_OTLP_ENDPOINT`, which also turns on ADK's log exporter. Set
+  `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true`, or the spans
+  carry no inputs or outputs. Never pass `WithOtelToCloud(true)`.
+- **Google ADK for Java.** ADK traces through `GlobalOpenTelemetry`, so
+  register an OpenTelemetry SDK globally with the exporter above before the
+  agent runs: build it with `OpenTelemetrySdk.builder()...buildAndRegisterGlobal()`,
+  or use the SDK's autoconfigure module or the OpenTelemetry Java agent with
+  the `OTEL_EXPORTER_OTLP_*` variables. Set
+  `ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=true`, or the spans carry no inputs or
+  outputs.
+- **Spring AI.** Spring AI reports through Micrometer Observation. Export it
+  over OTLP/HTTP the way the application's Spring Boot version does, and turn
+  on the prompt and completion content its observability settings leave off.
+
+In the traces, check that the spans show as agent, LLM, and tool spans with
+their inputs and outputs. If they arrive as plain spans without them, the
+framework is not emitting what Confident AI maps: add spans manually around
+the gaps, as below.
 
 ### Any other framework: manual spans
 
@@ -275,6 +297,25 @@ A framework not in the table is instrumented by hand, even if it emits
 OpenTelemetry of its own. Wrap the AI components in spans with
 `confident.span.type` (`llm`, `tool`, `agent`, `retriever`, or `base`) and
 `confident.span.input` / `confident.span.output` as strings.
+
+### Agents hosted on Amazon Bedrock AgentCore
+
+AgentCore is where the agent runs, not what traces it. Its own runtime span
+only records the invocation (`InvokeAgentRuntime`, with `aws.*` attributes);
+the LLM and tool spans come from the framework inside the agent. So pick the
+case above by that framework, in any language: an ADK agent on AgentCore
+follows Google ADK, and a hand-written Go or Java agent gets manual spans.
+
+Then make the export reach Confident AI instead of CloudWatch:
+
+- Set `DISABLE_ADOT_OBSERVABILITY=true` on the agent runtime, so AgentCore's
+  default ADOT settings (CloudWatch endpoint and `x-aws-*` headers) are not
+  applied.
+- Set the `OTEL_EXPORTER_OTLP_*` variables above in the runtime's environment
+  variables, with the key from a secret the runtime already reads, never in
+  the image.
+- Run the batch against the deployed agent, since the runtime's environment
+  only exists there.
 
 ## Load the key without reading it
 
