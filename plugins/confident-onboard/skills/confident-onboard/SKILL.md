@@ -73,6 +73,10 @@ Python 3.8+ is needed.
 
 For an EU account, add `--region eu` to `login`.
 
+If the user's request or the prompt you were given says `source tag <tag>`
+(for example `source tag agent-docs-mcp`), add `--from <tag>` to `login`. It
+tells Confident AI which page sent you. Pass the tag exactly as written.
+
 ## Workflow
 
 ### 1. Check the folder

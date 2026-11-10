@@ -9,6 +9,7 @@ Commands, run from the project directory:
 
   check-key           Is there already a working key? Prints its status only.
   login               Start a browser sign-in. Prints the link and code.
+                      --from <tag> records the page that sent the agent.
                       --browser says who opens it: system (this script, the
                       default), agent (the agent's own browser), or manual.
   wait                Wait for the browser sign-in, then print the account,
@@ -31,6 +32,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import secrets
 import ssl
 import sys
@@ -46,6 +48,8 @@ from pathlib import Path
 
 KEY_NAME = "CONFIDENT_API_KEY"
 SOURCE = "confident-onboard"
+# The page that sent the agent here, from "source tag <tag>" in its prompt.
+SOURCE_TAG = re.compile(r"^agent-[a-zA-Z0-9_-]{1,58}$")
 API_URLS = {
     "us": "https://api.confident-ai.com",
     "eu": "https://eu.api.confident-ai.com",
@@ -370,7 +374,13 @@ def cmd_login(args):
         context["organizationId"] = args.org_id
     if args.proj_id:
         context["projectId"] = args.proj_id
-    session = data_of(*request("POST", f"{base}/cli/auth/sessions", {"context": context}))
+    if args.source_tag and SOURCE_TAG.match(args.source_tag):
+        context["setupFrom"] = args.source_tag
+    status, payload = request("POST", f"{base}/cli/auth/sessions", {"context": context})
+    if status == 400 and context.pop("setupFrom", None):
+        # Older servers reject unknown context fields; sign in without the tag.
+        status, payload = request("POST", f"{base}/cli/auth/sessions", {"context": context})
+    session = data_of(status, payload)
     for field in ("deviceCode", "userCode", "verificationUri", "verificationUriComplete", "expiresIn", "interval"):
         if field not in session:
             raise Failure(f"Unexpected sign-in response: missing {field}.")
@@ -792,6 +802,7 @@ def main():
     login.add_argument("--no-browser", action="store_true", help="same as --browser manual")
     login.add_argument("--org-id")
     login.add_argument("--proj-id")
+    login.add_argument("--from", dest="source_tag", help="source tag from the prompt, e.g. agent-docs-mcp")
     wait = sub.add_parser("wait")
     wait.add_argument("--timeout", type=int, default=WAIT_SLICE_SECONDS)
     complete = sub.add_parser("complete")
