@@ -71,11 +71,16 @@ Below, `onboard` is short for `python3 <path>/confident_onboard.py`. Use
 `python` if `python3` is missing; if neither exists, stop and tell the user
 Python 3.8+ is needed.
 
-For an EU account, add `--region eu` to `login`.
+For an EU account, put `--region eu` before `login`: `onboard --region eu login`.
+After `login` it fails.
 
-If the user's request or the prompt you were given says `source tag <tag>`
-(for example `source tag agent-docs-mcp`), add `--from <tag>` to `login`. It
-tells Confident AI which page sent you. Pass the tag exactly as written.
+If the user's request or the prompt you were given names a source tag (for
+example `source tag agent-docs-mcp`), add `--from <tag>` after `login`:
+`onboard login --from agent-docs-mcp`, or for EU
+`onboard --region eu login --from agent-docs-mcp`. It tells Confident AI which
+page sent you. A tag starts with `agent-`; leave out quotes and any punctuation
+after it. `login` prints `sourceTag`: `sent`, or why the tag was ignored or
+dropped. Sign-in continues either way, so do not stop or retry because of it.
 
 ## Workflow
 
@@ -106,6 +111,9 @@ First pick the browser, and use it again in step 8:
   browser.
 - **Neither can open it** (an SSH or remote session): run `onboard login
   --browser manual` and show the user the link to open themselves.
+
+Add `--from <tag>` and `--region eu` from "The helper script" above to whichever
+`login` command you run, in the positions shown there.
 
 `login` prints a `url` and a `code`. Show them to the user in a short message
 on their own lines, for example:
