@@ -9,6 +9,8 @@ Commands, run from the project directory:
 
   check-key           Is there already a working key? Prints its status only.
   login               Start a browser sign-in. Prints the link and code.
+                      --from <tag> sends the page tag from the prompt
+                      (agent-...); other values are ignored.
                       --browser says who opens it: system (this script, the
                       default), agent (the agent's own browser), or manual.
   wait                Wait for the browser sign-in, then print the account,
@@ -31,6 +33,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import secrets
 import ssl
 import sys
@@ -46,6 +49,11 @@ from pathlib import Path
 
 KEY_NAME = "CONFIDENT_API_KEY"
 SOURCE = "confident-onboard"
+# The page that sent the agent here, from "source tag <tag>" in its prompt.
+# Only agent-* tags are sent; the server allows at most 64 characters.
+SOURCE_TAG = re.compile(r"agent-[a-zA-Z0-9_-]{1,58}")
+# The error a server without source tag support returns for the extra field.
+SETUP_CONTEXT_REJECTED = "Invalid CLI setup context."
 API_URLS = {
     "us": "https://api.confident-ai.com",
     "eu": "https://eu.api.confident-ai.com",
@@ -370,7 +378,30 @@ def cmd_login(args):
         context["organizationId"] = args.org_id
     if args.proj_id:
         context["projectId"] = args.proj_id
-    session = data_of(*request("POST", f"{base}/cli/auth/sessions", {"context": context}))
+    tag_status = None
+    if args.source_tag:
+        tag = clean_source_tag(args.source_tag)
+        if tag:
+            context["setupFrom"] = tag
+            tag_status = "sent"
+        else:
+            tag_status = "ignored: a tag is agent- followed by letters, digits, - or _"
+    status, payload = request("POST", f"{base}/cli/auth/sessions", {"context": context})
+    if (
+        status == 400
+        and "setupFrom" in context
+        and isinstance(payload, dict)
+        and payload.get("error") == SETUP_CONTEXT_REJECTED
+    ):
+        # A server without source tag support rejects the field; sign in without it.
+        first_error = error_message(status, payload)
+        del context["setupFrom"]
+        tag_status = "dropped: this server does not accept source tags yet"
+        try:
+            status, payload = request("POST", f"{base}/cli/auth/sessions", {"context": context})
+        except Failure as error:
+            raise Failure(f"{error} (a first attempt failed with: {first_error})")
+    session = data_of(status, payload)
     for field in ("deviceCode", "userCode", "verificationUri", "verificationUriComplete", "expiresIn", "interval"):
         if field not in session:
             raise Failure(f"Unexpected sign-in response: missing {field}.")
@@ -387,21 +418,28 @@ def cmd_login(args):
         },
     )
     opened = browser == "system" and open_browser(session["verificationUriComplete"])
-    emit(
-        {
-            "status": "pending",
-            "url": session["verificationUriComplete"],
-            "code": session["userCode"],
-            "browser": browser,
-            "browserOpened": opened,
-            "expiresInMinutes": round(float(session["expiresIn"]) / 60),
-            "next": (
-                "Open the url in your own browser, show the user the code, then run `wait`."
-                if browser == "agent"
-                else "Show the user the url and code, then run `wait`."
-            ),
-        }
-    )
+    result = {
+        "status": "pending",
+        "url": session["verificationUriComplete"],
+        "code": session["userCode"],
+        "browser": browser,
+        "browserOpened": opened,
+        "expiresInMinutes": round(float(session["expiresIn"]) / 60),
+        "next": (
+            "Open the url in your own browser, show the user the code, then run `wait`."
+            if browser == "agent"
+            else "Show the user the url and code, then run `wait`."
+        ),
+    }
+    if tag_status:
+        result["sourceTag"] = tag_status
+    emit(result)
+
+
+def clean_source_tag(raw):
+    """Return the tag without quotes or trailing punctuation, or None if invalid."""
+    tag = raw.strip().strip("\"'`").rstrip(".,;:!?)\"'`")
+    return tag if SOURCE_TAG.fullmatch(tag) else None
 
 
 def cmd_wait(args):
@@ -792,6 +830,7 @@ def main():
     login.add_argument("--no-browser", action="store_true", help="same as --browser manual")
     login.add_argument("--org-id")
     login.add_argument("--proj-id")
+    login.add_argument("--from", dest="source_tag", help="source tag from the prompt; must start with agent-, e.g. agent-docs-mcp")
     wait = sub.add_parser("wait")
     wait.add_argument("--timeout", type=int, default=WAIT_SLICE_SECONDS)
     complete = sub.add_parser("complete")
